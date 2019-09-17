@@ -26,6 +26,7 @@ dryrun=0
 non_interactive=0
 verbose=0
 restart=0
+tune_network=0
 cert_type="letsencrypt"
 eme_img="encryptme/pep"  # TODO: finalize w/ Encryptme hub account
 wt_image="v2tec/watchtower"
@@ -70,6 +71,7 @@ GENERIC OPTIONS:
                           (default: $cert_type)
     -v|--verbose          Verbose debugging info
     -l|--logging          Enable some logging, eg IPSEC via /dev/log
+    -T|--tuned-network    Add 'sysctl.conf' tuning to 'encryptme.conf'
 
 INIT OPTIONS:
     --api-url URL         Use custom URL for Encrypt.me server API
@@ -191,6 +193,7 @@ server_init() {
         -e ENCRYPTME_STATS_SERVER=$stats_server \
         -e ENCRYPTME_STATS_ARGS="$stats_args" \
         -e ENCRYPTME_VERBOSE=$verbose \
+        -e ENCRYPTME_TUNED_NETWORK=$tuned_network \
         -e INIT_ONLY=1 \
         -e DNS_TEST_IP="$dns_test_ip" \
         -e DNS_CHECK=$dns_check \
@@ -254,6 +257,7 @@ server_run() {
         -e ENCRYPTME_STATS=$send_stats \
         -e ENCRYPTME_STATS_SERVER=$stats_server \
         -e ENCRYPTME_STATS_ARGS="$stats_args" \
+        -e ENCRYPTME_TUNED_NETWORK=$tuned_network \
         -v "$conf_dir:/etc/encryptme" \
         -v "$conf_dir/letsencrypt:/etc/letsencrypt" \
         -v /lib/modules:/lib/modules \
@@ -382,6 +386,9 @@ while [ $# -gt 0 ]; do
         --restart|-R)
             restart=1
             ;;
+        --tuned-network|-T)
+            tuned_network=1
+            ;;
         *)
             [ -n "$action" ] && fail "Invalid arg '$arg'; an action of '$action' was already given"
             action="$arg"
@@ -425,13 +432,24 @@ esac
             || fail "Failed to pull WatchTower image '$wt_image' from Docker Hub"
     }
 
+    # the images exist? auto-pull latest if using the official image
+    [ $pull_image -eq 1 ] && {
+        rem "pulling '$eme_img' from Docker Hub"
+        cmd docker pull "$eme_img" \
+            || fail "Failed to pull Encrypt.me client image '$eme_img' from Docker Hub"
+    }
+
     # get auth/server info if needed
     rem "interactively collecting any required missing params"
     collect_args
-    
-    #load sysctl configuration
-#    cp $BASE_DIR/sysctl.conf /etc
-#    /sbin/sysctl -p /etc/sysctl.conf
+
+    #
+    [ $tune_network -eq 1 ] && {
+       #load sysctl configuration
+        #cp $BASE_DIR/sysctl.conf /etc
+        touch /etc/sysctl.d/encryptme.conf
+        # /sbin/sysctl -p /etc/sysctl.conf
+    }
 }
 
 
