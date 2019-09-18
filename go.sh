@@ -27,7 +27,7 @@ dryrun=0
 non_interactive=0
 verbose=0
 restart=0
-tune_network=0
+tuned_network=0
 cert_type="letsencrypt"
 eme_img="encryptme/pep"  # TODO: finalize w/ Encryptme hub account
 wt_image="v2tec/watchtower"
@@ -418,9 +418,6 @@ esac
 # init/run pre-tasks
 [ "$action" = 'init' -o "$action" = 'run' ] && {
     # the images exist? auto-pull latest if using the official image
-    rem "Creating 2 $ENCRYPTME_CONF_FILE file."
-    touch ENCRYPTME_CONF_FILE || fail "Failed to create encryptme.conf"
-
     [ $pull_image -eq 1 ] && {
         rem "pulling '$eme_img' from Docker Hub"
         cmd docker pull "$eme_img" \
@@ -448,21 +445,23 @@ esac
     collect_args
 
     # Add sysctl.conf tuning to /etc/sysctl.d/encryptme.conf
-    [ $tune_network -eq 1 ] && {
+    [ $tuned_network -eq 1 ] && {
         rem "Creating $ENCRYPTME_CONF_FILE file."
-        touch ENCRYPTME_CONF_FILE || fail "Failed to create encryptme.conf"
-        echo "net.core.somaxconn=1024
-              net.core.netdev_max_backlog=250000
-              net.core.rmem_default=262144
-              net.core.rmem_max=16777216
-              net.core.wmem_default=262144
-              net.core.wmem_max=16777216
-              net.ipv4.tcp_rmem=262144 262144 16777216
-              net.ipv4.tcp_wmem=262144 262144 16777216
-              net.ipv4.tcp_max_syn_backlog=1000
-              net.ipv4.tcp_slow_start_after_idle=0
-              net.core.optmem_max=16777216
-              net.netfilter.nf_conntrack_max=1008768" >> ENCRYPTME_CONF_FILE
+        touch $ENCRYPTME_CONF_FILE || fail "Failed to create encryptme.conf"
+        cat > $ENCRYPTME_CONF_FILE <<EOF
+net.core.somaxconn=1024
+net.core.netdev_max_backlog=250000
+net.core.rmem_default=262144
+net.core.rmem_max=16777216
+net.core.wmem_default=262144
+net.core.wmem_max=16777216
+net.ipv4.tcp_rmem=262144 262144 16777216
+net.ipv4.tcp_wmem=262144 262144 16777216
+net.ipv4.tcp_max_syn_backlog=1000
+net.ipv4.tcp_slow_start_after_idle=0
+net.core.optmem_max=16777216
+net.netfilter.nf_conntrack_max=1008768
+EOF
     }
 }
 
