@@ -418,6 +418,9 @@ esac
 # init/run pre-tasks
 [ "$action" = 'init' -o "$action" = 'run' ] && {
     # the images exist? auto-pull latest if using the official image
+    rem "Creating 2 $ENCRYPTME_CONF_FILE file."
+    touch ENCRYPTME_CONF_FILE || fail "Failed to create encryptme.conf"
+
     [ $pull_image -eq 1 ] && {
         rem "pulling '$eme_img' from Docker Hub"
         cmd docker pull "$eme_img" \
@@ -446,6 +449,7 @@ esac
 
     # Add sysctl.conf tuning to /etc/sysctl.d/encryptme.conf
     [ $tune_network -eq 1 ] && {
+        rem "Creating $ENCRYPTME_CONF_FILE file."
         touch ENCRYPTME_CONF_FILE || fail "Failed to create encryptme.conf"
         echo "net.core.somaxconn=1024
               net.core.netdev_max_backlog=250000
