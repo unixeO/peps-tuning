@@ -8,6 +8,7 @@
 BASE_DIR=$(cd $(dirname "$0") && pwd -P)
 SCRIPT_NAME=$(basename "$0")
 SCRIPT_PATH="$0"
+ENCRYPTME_CONF_FILE="/etc/sysctl.d/encryptme.conf"
 
 # dynamic params
 [ $UID -eq 0 ] && conf_dir=/etc/encryptme || conf_dir="$BASE_DIR/encryptme_conf"
@@ -100,7 +101,7 @@ EXAMPLES:
     # launch an auto-updating image with health reporting using the official
     # image and ensure our AWS/DO public IP matches our FQDN
     ./go.sh init -S -U -P -D
-    
+
     # run the newly initialized server
     ./go.sh run
 
@@ -167,7 +168,7 @@ docker_cleanup() {
     fi
     local container="$1"
     local running=$(cmd docker inspect --format='{{.State.Running}}' "$container" 2>/dev/null)
-    rem "Container '$container' has running=$running" 
+    rem "Container '$container' has running=$running"
     [ $do_restart -eq 1 -a "$running" = "true" ] &&
         (cmd docker kill "$container" ||
             fail "Failed to kill running container $container")
@@ -291,7 +292,7 @@ arg_count=0
 while [ $# -gt 0 ]; do
     arg="$1"
     shift
-    case "$arg" in 
+    case "$arg" in
         --dryrun|dry-run|-d)
             dryrun=1
             ;;
@@ -443,12 +444,21 @@ esac
     rem "interactively collecting any required missing params"
     collect_args
 
-    #
+    # Add sysctl.conf tuning to /etc/sysctl.d/encryptme.conf
     [ $tune_network -eq 1 ] && {
-       #load sysctl configuration
-        #cp $BASE_DIR/sysctl.conf /etc
-        touch /etc/sysctl.d/encryptme.conf
-        # /sbin/sysctl -p /etc/sysctl.conf
+        touch ENCRYPTME_CONF_FILE || fail "Failed to create encryptme.conf"
+        echo "net.core.somaxconn=1024
+              net.core.netdev_max_backlog=250000
+              net.core.rmem_default=262144
+              net.core.rmem_max=16777216
+              net.core.wmem_default=262144
+              net.core.wmem_max=16777216
+              net.ipv4.tcp_rmem=262144 262144 16777216
+              net.ipv4.tcp_wmem=262144 262144 16777216
+              net.ipv4.tcp_max_syn_backlog=1000
+              net.ipv4.tcp_slow_start_after_idle=0
+              net.core.optmem_max=16777216
+              net.netfilter.nf_conntrack_max=1008768" >> ENCRYPTME_CONF_FILE
     }
 }
 
