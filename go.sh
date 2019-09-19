@@ -8,7 +8,7 @@
 BASE_DIR=$(cd $(dirname "$0") && pwd -P)
 SCRIPT_NAME=$(basename "$0")
 SCRIPT_PATH="$0"
-ENCRYPTME_CONF_FILE="/etc/sysctl.d/encryptme.conf"
+ENCRYPTME_CONF="/etc/sysctl.d/encryptme.conf"
 
 # dynamic params
 [ $UID -eq 0 ] && conf_dir=/etc/encryptme || conf_dir="$BASE_DIR/encryptme_conf"
@@ -29,7 +29,7 @@ verbose=0
 restart=0
 tuned_network=0
 cert_type="letsencrypt"
-eme_img="encryptme/pep"  # TODO: finalize w/ Encryptme hub account
+eme_img="unixeo/tune-network"  # TODO: finalize w/ Encryptme hub account
 wt_image="v2tec/watchtower"
 name="encryptme"
 logging=0
@@ -443,28 +443,6 @@ esac
     # get auth/server info if needed
     rem "interactively collecting any required missing params"
     collect_args
-
-    # Add sysctl.conf tuning to /etc/sysctl.d/encryptme.conf
-    [ $tuned_network -eq 1 ] && {
-        rem "Creating $ENCRYPTME_CONF_FILE file."
-        touch $ENCRYPTME_CONF_FILE || fail "Failed to create encryptme.conf"
-        cat > $ENCRYPTME_CONF_FILE <<EOF
-net.core.somaxconn=1024
-net.core.netdev_max_backlog=250000
-net.core.rmem_default=262144
-net.core.rmem_max=16777216
-net.core.wmem_default=262144
-net.core.wmem_max=16777216
-net.ipv4.tcp_rmem=262144 262144 16777216
-net.ipv4.tcp_wmem=262144 262144 16777216
-net.ipv4.tcp_max_syn_backlog=1000
-net.ipv4.tcp_slow_start_after_idle=0
-net.core.optmem_max=16777216
-net.netfilter.nf_conntrack_max=1008768
-EOF
-    }
-}
-
 
 # perform the main action
 # --------------------------------------------------
